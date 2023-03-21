@@ -1,0 +1,14 @@
+{
+    "name": "armedjuror/youlive",
+    "authors": [
+        {
+            "name": "Armed Juror",
+            "email": "armedjuror@gmail.com"
+        }
+    ],
+    "require": {
+        "vlucas/phpdotenv": "^5.5",
+        "ext-mysqli": "*",
+        "google/apiclient": "^2.12.1"
+    }
+}

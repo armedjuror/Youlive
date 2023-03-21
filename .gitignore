@@ -1,0 +1,6 @@
+youlive_setup/.env
+youlive_setup/client_secret.json
+youlive_setup/vendor/
+src/vendor/
+src/sb-admin-demo/
+.idea/
