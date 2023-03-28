@@ -1,10 +1,15 @@
 <?php
+require 'vendor/autoload.php';
 session_start();
+
+$token = bin2hex(random_bytes(32));
+$_SESSION['csrf_token'] = $token;
+
 function is_logged_out(): bool
 {
     $var_names = [
         'type',
-        'user_id',
+        'id',
         'name',
         'email'
     ];
@@ -20,12 +25,12 @@ function is_logged_out(): bool
     return $is_logged_out;
 }
 
-function session_check(){
+function session_check(mysqli $db_connection){
     if (is_logged_out()){
         logout();
     }else{
         if ($_SESSION['type']!='youlive_admin'){
-            $client = getOauth2Client();
+            $client = getOauth2Client($db_connection);
         }
     }
 }

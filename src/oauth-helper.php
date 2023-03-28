@@ -27,7 +27,7 @@ function getRedirectUri(): string
     return (isset($_SERVER['HTTPS']) ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . join('/', array_slice(explode('/', $_SERVER['REQUEST_URI']),0 , count(explode('/', $_SERVER['REQUEST_URI']))-1)) . '/initial_setup.php';
 }
 
-function getOauth2Client() {
+function getOauth2Client(mysqli $db_connection) {
     try {
 
         $client = buildClient();
@@ -39,16 +39,23 @@ function getOauth2Client() {
 
         // If the user has already authorized this app then get an access token
         // else redirect to ask the user to authorize access to Google Analytics.
-        if (isset($_SESSION['access_token']) && $_SESSION['access_token']) {
+        if (isset($_SESSION['access_token']) && $_SESSION['access_token'] && isset($_SESSION['channel_id'])) {
 
             // Set the access token on the client.
             $client->setAccessToken($_SESSION['access_token']);
 
             // Refresh the access token if it's expired.
             if ($client->isAccessTokenExpired()) {
-                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+                $client->fetchAccessTokenWithRefreshToken($_SESSION['refresh_token']);
                 $client->setAccessToken($client->getAccessToken());
-                $_SESSION['access_token'] = $client->getAccessToken();
+                $access_token = $client->getAccessToken();
+                $_SESSION['access_token'] = $access_token['access_token'];
+                $_SESSION['refresh_token'] = $access_token['refresh_token'];
+                $update_access_token = $db_connection->prepare("UPDATE channels SET access_token=?, refresh_token=? WHERE id=?");
+                $update_access_token->bind_param('sss', $_SESSION['access_token'] , $_SESSION['refresh_token'],$_SESSION['channel_id']);
+                if ($update_access_token->execute()){
+
+                }
             }
             return $client;
         } else {
@@ -58,5 +65,6 @@ function getOauth2Client() {
     } catch (Exception $e) {
         log_error($db_connection, 'TOKEN_REFRESH', $e);
         print_error($e, 'Oops, something went wrong!', 'Try reloading and if error persist please contact server admin. Error code: TOKEN_REFRESH');
+        exit();
     }
 }

@@ -86,7 +86,7 @@ else{
     <!-- Custom styles for this template-->
     <link href="ui/css/sb-admin-2.min.css" rel="stylesheet">
 </head>
-<body class="bg-gradient-dark">
+<body class="bg-gradient-<?=THEME?>">
 
 <div class="container">
 
@@ -130,7 +130,7 @@ else{
 
                                         <div class="form-outline mb-4" id="errorDiv" style="display: none"></div>
 
-                                        <button type="submit" name="addAdmin" class="btn btn-dark btn-block mb-4">Create Admin User</button>
+                                        <button type="submit" name="addAdmin" class="btn btn-<?=THEME?> btn-block mb-4">Create Admin User</button>
                                     </form>
                                     <?php
                                 }

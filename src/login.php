@@ -11,9 +11,10 @@ if (!is_logged_out()){
 }
 
 if (isset($_POST['login'])){
-    $email = trim($_POST['email']);
+    $email = htmlspecialchars(addslashes(trim($_POST['email'])));
     $password = trim($_POST['password']);
-    $fetch_user = $db_connection->prepare("SELECT * FROM users WHERE 1=1");
+    $fetch_user = $db_connection->prepare("SELECT * FROM users WHERE email=?");
+    $fetch_user->bind_param('s', $email);
     if ($fetch_user->execute()){
         $fetched = $fetch_user->get_result();
         if ($fetched->num_rows==1){
@@ -26,10 +27,16 @@ if (isset($_POST['login'])){
                 if ($user['type']!='youlive_admin'){
                     $_SESSION['channel_id'] = $user['channel_id'];
                     $channel_id = $user['channel_id'];
-                    $channel = $db_connection->query("SELECT access_token, refresh_token FROM channels WHERE id='$channel_id'")->fetch_assoc();
+                    $channel = $db_connection->query("SELECT * FROM channels WHERE id='$channel_id'")->fetch_assoc();
+                    $_SESSION['channel_name'] = $channel['name'];
                     $_SESSION['refresh_token'] = $channel['refresh_token'];
                     $_SESSION['access_token'] = $channel['access_token'];
+                    $_SESSION['picture'] = $channel['picture'];
+                    $_SESSION['max_users'] = $channel['max_users'];
                 }
+                $login_now = $db_connection->prepare("UPDATE users SET last_login_at=NOW() WHERE id=?");
+                $login_now->bind_param('s', $user['id']);
+                $login_now->execute();
                 header('Location: dashboard.php');
             }else{
                 $have_error = true;
@@ -64,7 +71,7 @@ if (isset($_POST['login'])){
     <!-- Custom styles for this template-->
     <link href="ui/css/sb-admin-2.min.css" rel="stylesheet">
 </head>
-<body class="bg-gradient-dark">
+<body class="bg-gradient-<?=THEME?>">
 
 <div class="container">
 
@@ -92,7 +99,7 @@ if (isset($_POST['login'])){
                                         <input type="password" class="form-control"
                                                id="password" name="password"  placeholder="Password">
                                     </div>
-                                    <button type="submit" name="login" class="btn btn-dark btn-block">Login</button>
+                                    <button type="submit" name="login" class="btn btn-<?=THEME?> btn-block">Login</button>
                                 </form>
                             </div>
                         </div>

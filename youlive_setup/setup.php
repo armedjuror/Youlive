@@ -1,10 +1,10 @@
 <?php
-require('./vendor/autoload.php');
+require __DIR__.'/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-const APP_NAME = "Youlive";
-const THEME='dark';
+const APP_NAME = "SKICR";
+const THEME='danger';
 
 try{
     $db_connection = new mysqli(
