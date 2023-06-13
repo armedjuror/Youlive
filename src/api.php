@@ -1,10 +1,13 @@
 <?php
-session_start();
 require 'requirements.php';
 require SETUP_FILE;
+require 'session.php';
+require 'oauth-helper.php';
+
 
 $method = $_SERVER['REQUEST_METHOD'];
-$path = explode("/", substr(@$_SERVER['PATH_INFO'], 1));
+$path_string = rtrim(substr(@$_SERVER['PATH_INFO'], 1), '/');
+$path = explode("/", $path_string);
 $controller = strtolower($path[0]);
 $function = strtolower($path[1] ?? 'main');
 $request = new Request($method, array_slice($path, 2));

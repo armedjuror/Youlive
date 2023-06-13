@@ -53,9 +53,7 @@ function getOauth2Client(mysqli $db_connection) {
                 $_SESSION['refresh_token'] = $access_token['refresh_token'];
                 $update_access_token = $db_connection->prepare("UPDATE channels SET access_token=?, refresh_token=? WHERE id=?");
                 $update_access_token->bind_param('sss', $_SESSION['access_token'] , $_SESSION['refresh_token'],$_SESSION['channel_id']);
-                if ($update_access_token->execute()){
-
-                }
+                $update_access_token->execute();
             }
             return $client;
         } else {

@@ -31,6 +31,7 @@ function session_check(mysqli $db_connection){
     }else{
         if ($_SESSION['type']!='youlive_admin'){
             $client = getOauth2Client($db_connection);
+            return $client;
         }
     }
 }

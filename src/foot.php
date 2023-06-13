@@ -61,6 +61,7 @@
 <script src="ui/extras/datatables/dataTables.bootstrap4.min.js"></script>
 <!-- Custom scripts for all pages-->
 <script src="ui/js/sb-admin-2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 <script>
     const IN_DEVELOPMENT = <?=$_ENV['DEV_MODE']?>;
     const THEME = '<?=THEME?>';
@@ -68,10 +69,10 @@
     $(document).ready(function() {
         const dataTable = $('#dataTable').DataTable();
     });
+
+    $(window).on('load', function() {
+        $('#AjaxLoader').fadeOut();
+    });
 </script>
 <script src="ui/js/utility.js"></script>
 <script src="ui/js/ajax.js"></script>
-
-</body>
-
-</html>

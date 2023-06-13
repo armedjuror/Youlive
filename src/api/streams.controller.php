@@ -1,30 +1,22 @@
 <?php
 
+
 /**
  * User Controller
  */
 
-const TABLE = 'users';
+const TABLE = 'streams';
 const PK = 'id';
-const AK = ['channel_id'];
-const SELECTABLE = ['channel_id', 'id', 'type', 'email', 'name', 'joined_at', 'last_login_at', 'updated_at'];
-const REQUIRED_TO_INSERT = ['channel_id', 'type', 'email', 'name', 'password'];
-const INSERT_FIELDS = ['channel_id', 'id', 'type', 'email', 'name', 'password'];
+const AK = ['user_id'];
+const SELECTABLE = ['id', 'user_id', 'title', 'ingestionType', 'frameRate', 'resolution', 'streamKey', 'created_at', 'updated_at'];
+const REQUIRED_TO_INSERT = ['user_id', 'title', 'ingestionType', 'frameRate', 'resolution'];
+const INSERT_FIELDS = ['id', 'user_id', 'title', 'ingestionType', 'frameRate', 'resolution', 'streamKey'];
 // If PK is in INSERT_FIELDS then it should be VARCHAR of size 13 or more and uniqid will be generated while creation
-const CREATED_AT = 'joined_at';
-if (in_array(PK, INSERT_FIELDS)) {
-    define("GENERATE_PK", true);
-} else {
-    define("GENERATE_PK", false);
-}
-
-const PASSWORDS = ['password'];
-const UPDATABLE = ['channel_id', 'type', 'email', 'name', 'password', 'last_login_at'];
+const CREATED_AT = 'created_at';
+const GENERATE_PK = false;
+const PASSWORDS = [];
+const UPDATABLE = [];
 const UPDATED_AT = 'updated_at';
-if ($_SESSION['type']!='admin'){
-    echo json_encode(array('status_code'=>401, 'error_code'=>'UNAUTHORISED', 'error_desc'=>'Unauthorised access!', 'error_msg'=>'Oops, you seems less privileged!'));
-    exit();
-}
 
 
 /**
@@ -48,23 +40,21 @@ function main(Request $request)
     if ($check['status_code']) {
 
         if ($request->method === 'GET') {
-
-            if (isset($request->query['cols'])){
-                $selectables = explode(',' , $request->query['cols']);
-            }else{
-                $selectables = SELECTABLE;
-            }
-
             // Show
             if (isset($request->query['pk'])) {
-                $select = $request->connection->prepare("SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE . " WHERE " . PK . "=?");
+                $select = $request->connection->prepare("SELECT " . '`' . implode('`, `', SELECTABLE) . '`' . " FROM " . TABLE . " WHERE " . PK . "=?");
                 $select->bind_param(Database::get_type_char($request->query['pk']), $request->query['pk']);
             } elseif (isset($request->query['ak']) && isset($request->query['key']) && in_array($request->query['key'], AK)) {
-                $select = $request->connection->prepare("SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE . " WHERE `" . $request->query['key'] . "`=?");
+                $select = $request->connection->prepare("SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE . " WHERE " . $request->query['key'] . "=?");
                 $select->bind_param(Database::get_type_char($request->query['ak']), $request->query['ak']);
             } // Index
             else {
-                $select_query = "SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE;
+                if (isset($request->query['cols'])) {
+                    $selectables = explode(',', $request->query['cols']);
+                    $select_query = "SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE;
+                } else {
+                    $select_query = "SELECT " . '`' . implode('`, `', SELECTABLE) . '`' . " FROM " . TABLE;
+                }
                 $offset = $request->query['offset'] ?? null;
                 $limit = $request->query['limit'] ?? null;
                 if ($offset && $limit && is_int($offset) && is_int($limit)) {
@@ -117,6 +107,22 @@ function main(Request $request)
 
             $create_data = [];
             $type_string = '';
+
+            /**
+             * CUSTOM ACTION : CREATE STREAM USING YOUTUBE API
+             */
+            $client = session_check($request->connection);
+            $stream =  createStream(
+                $request->connection,
+                $client,
+                $request->body['title'],
+                $request->body['ingestionType'],
+                $request->body['frameRate'],
+                $request->body['resolution'],
+            );
+            $request->body['id'] = $stream['id'];
+            $request->body['streamKey'] = $stream['key'];
+
             foreach (INSERT_FIELDS as $var) {
                 if (GENERATE_PK && $var == PK) {
                     $pk = uniqid();
@@ -127,6 +133,8 @@ function main(Request $request)
                     $type_string .= Database::get_type_char($request->body[$var]);
                 }
             }
+
+
             $insert = $request->connection->prepare('INSERT IGNORE INTO ' . TABLE . ' 
                     ( ' . '`' . implode('`, `', INSERT_FIELDS) . '`' . ', `' . CREATED_AT . '`) 
                     VALUE (
@@ -135,7 +143,7 @@ function main(Request $request)
                     ');
             call_user_func_array(array($insert, "bind_param"), array_merge(array($type_string), $create_data));
             if ($insert->execute()) {
-                echo json_encode(array('status_code' => 1));
+                echo json_encode(array('status_code' => 1, 'result'=>['key'=>$stream['key'], 'pk'=>$stream['id']]));
             } else {
                 log_error($request->connection, 'DB_INSERT', new Exception($request->connection->error));
                 echo json_encode(array(
@@ -149,7 +157,7 @@ function main(Request $request)
         } // Create
         else if ($request->method === 'PUT') {
 
-            if (!isset($request->body['pk'])){
+            if (!isset($request->body['pk'])) {
                 echo json_encode(array(
                     'status_code' => 0,
                     'error_code' => 'INVALID_REQUEST',
@@ -170,7 +178,7 @@ function main(Request $request)
                         $hash = password_hash($request->body[$var], PASSWORD_DEFAULT);
                         $update_values[] = &$hash;
                         $type_string .= 's';
-                    }else{
+                    } else {
                         $update_values[] = &$request->body[$var];
                         $type_string .= Database::get_type_char($request->body[$var]);
                     }
@@ -207,7 +215,9 @@ function main(Request $request)
         } // Update
         else if ($request->method === 'DELETE') {
             if (isset($request->body['pk']) || isset($request->query['pk'])) {
-                if (isset($request->body['pk']))$request->query['pk'] = $request->body['pk'];
+                if (isset($request->body['pk'])) $request->query['pk'] = $request->body['pk'];
+                $client = session_check($request->connection);
+                delete_stream($request->connection, $client, $request->body['pk']);
                 $delete = $request->connection->prepare("DELETE FROM " . TABLE . " WHERE " . PK . "=?");
                 $delete->bind_param(Database::get_type_char($request->query['pk']), $request->query['pk']);
                 if ($delete->execute()) {
@@ -231,124 +241,73 @@ function main(Request $request)
             }
             exit();
         } // Delete
-    }
-    else {
+    } else {
         echo json_encode($check);
         exit();
     }
 
 }
 
+function createStream($connection, $client, string $title, string $ingestionType, string $frameRate, string $resolution){
+    try{
+        $service = new Google_Service_YouTube($client);
+        $liveStream = new Google_Service_YouTube_LiveStream();
+        $cdnSettings = new Google_Service_YouTube_CdnSettings();
+        $cdnSettings->setFrameRate($frameRate);
+        $cdnSettings->setIngestionType($ingestionType);
+        $cdnSettings->setResolution($resolution);
+        $liveStream->setCdn($cdnSettings);
+        $liveStreamSnippet = new Google_Service_YouTube_LiveStreamSnippet();
+        $liveStreamSnippet->setTitle($title);
+        $liveStream->setSnippet($liveStreamSnippet);
+        $streamInsert = $service->liveStreams->insert('snippet,cdn', $liveStream);
+        return ['id'=>$streamInsert->id,'key'=>$streamInsert->cdn->ingestionInfo->streamName];
+    }catch (Exception $e){
+        log_error($connection, 'YOUTUBE_STREAM_CREATE', $e);
+        echo json_encode(array('status_code'=>0, 'error_code'=>'YOUTUBE_STREAM_CREATE', 'error_desc'=>$e->getMessage(), 'error_msg'=>json_decode($e->getMessage(), true)['error']['message']));
+        exit();
+    }
+}
 
-/**
- * import using csv
- * @param Request $request
- * @return void
- */
-function import(Request $request){
-    $allowed_methods = [
-        'POST',
-    ];
+function delete_stream($connection, $client, string $id){
+    try{
+        $service = new Google_Service_YouTube($client);
+        $service->liveStreams->delete($id);
+    }catch (Exception $e){
+        log_error($connection, 'YOUTUBE_STREAM_DELETE', $e);
+        echo json_encode(array('status_code'=>0, 'error_code'=>'YOUTUBE_STREAM_DELETE', 'error_desc'=>$e->getMessage(), 'error_msg'=>json_decode($e->getMessage(), true)['error']['message']));
+        exit();
+    }
+}
 
+function sync($request){
+    $allowed_methods = ['GET'];
     $check = $request->verify_method($allowed_methods);
     if ($check['status_code']) {
-        $start_time = microtime(TRUE);
-        $limit_reached = FALSE;
-        $limit = $_SESSION['max_users'];
-        $file_to_import = $_FILES['file'];
-        $file_types = array('text/x-comma-separated-values', 'text/comma-separated-values', 'application/octet-stream', 'application/vnd.ms-excel', 'application/x-csv', 'text/x-csv', 'text/csv', 'application/csv', 'application/excel', 'application/vnd.msexcel', 'text/plain');
-        if (!empty($file_to_import['name']) && in_array($file_to_import['type'], $file_types)) {
-            $reading_csv_file = fopen($file_to_import['tmp_name'], 'r');
-            $user_count = $request->connection->query("SELECT COUNT(*) as `current` FROM users WHERE channel_id='" . $_SESSION['channel_id'] . "'" )->fetch_assoc();
-            $allowable_quota = $limit-$user_count['current'];
-            fgetcsv($reading_csv_file); // skipping header
-            $imported_count = 0;
-            $skipped_count = 0;
-            $total = 0;
-            $user_imports = [];
-            $errors = [];
-            $dummy = 'Pass'.date('Dyd');
-            $dummy_password = password_hash(hash('sha256', $dummy), PASSWORD_DEFAULT);
-            while (($user_data = fgetcsv($reading_csv_file)) !== FALSE){
-                if ($limit!=-1 && $allowable_quota<=0){
-                    $limit_reached = TRUE;
-                    $skipped_count++;
-                    $total++;
-                    continue;
+        if ($_SESSION['type']=='youlive_admin' || $_SESSION['type']=='admin'){
+            $client = session_check($request->connection);
+            $service = new Google_Service_YouTube($client);
+            $queryParams = [
+                'maxResults' => 50,
+                'mine' => true
+            ];
+            do{
+                $response = $service->liveStreams->listLiveStreams('id,snippet,cdn', $queryParams);
+                foreach ($response->items as $stream){
+                    $query = $request->connection->prepare("INSERT IGNORE INTO streams (id, user_id, title, ingestionType, frameRate, resolution, streamKey) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $query->bind_param('sssssss', $stream->id, $_SESSION['id'], $stream->snippet->title, $stream->cdn->ingestionType, $stream->cdn->frameRate, $stream->cdn->resolution, $stream->cdn->ingestionInfo->streamName);
+                    $query->execute();
                 }
-
-                $name_check = User_Input::filtered_input($user_data[0], '', 255, 'Name of '.($total+1).'th row');
-                $email_check = User_Input::filtered_input($user_data[1], 'email', 255, 'Email of '.($total+1).'th row');
-
-                if (!$name_check['status_code']){
-                    $errors[] = $name_check['error_msg'];
-                    $skipped_count++;
-                    $total++;
-                    continue;
-                }
-
-                if (!$email_check['status_code']){
-                    $errors[] = $email_check['error_msg'];
-                    $skipped_count++;
-                    $total++;
-                    continue;
-                }
-
-                $user_id = uniqid();
-                $user_imports[] = "('".$_SESSION['channel_id']."','".$user_id."', 'operator', '".$email_check['result']."', '".$name_check['result']."', '".$dummy_password."')";
-                $total++;
-                $allowable_quota--;
             }
-
-            $user_import_chunks = array_chunk($user_imports, 100);
-
-            foreach ($user_import_chunks as $arr){
-                if (!mysqli_query($request->connection, "INSERT IGNORE INTO users (channel_id, id, type, email, `name`, `password`) VALUES ".implode(',', $arr))){
-                    log_error($request->connection, 'DB_INSERT', new Exception($request->connection->error));
-                    echo json_encode(array(
-                        'status_code'=>0,
-                        'error_code'=>'DB_INSERT',
-                        'error_desc' => $request->connection->error,
-                        'error_msg' => 'Oops, something went wrong!'
-                    ));
-                    exit();
-                }
-                $imported_count += count($arr);
-            }
-
-            $time_spend = microtime(TRUE) - $start_time;
-
-            if ($limit_reached){
-                $error = "Imported maximum number of Users!";
-                echo json_encode(array('message'=> $error,
-                    'imported' => $imported_count,
-                    'skipped'=>$skipped_count,
-                    "time_used"=>$time_spend,
-                    'password'=>$dummy,
-                    'errors'=>$errors,
-                    'status_code'=>1,
-                    'error_code'=>'LIMIT_EXCEEDED'
-                ));
-                exit();
-            }else{
-                echo json_encode(array(
-                        'status_code'=>1,
-                        'message'=>"Successfully completed the import",
-                        'imported' => $imported_count,
-                        'skipped'=>$skipped_count,
-                        "time_used"=>$time_spend,
-                        'password'=>$dummy,
-                        'errors'=>$errors
-                ));
-                exit();
-            }
+            while (!empty($response->nextPageToken));
+            echo json_encode(array('status_code'=>1));
         }else{
-            $error = "File is either not selected or not csv.";
             echo json_encode(array(
-                'status_code'=>0,
-                'error_code'=>'FILE_ERROR',
-                'error_desc'=>$error,
-                'error_msg'=>$error
+                'status_code' => 401,
+                'error_code' => 'UNAUTHORISED',
+                'error_desc' => "Unauthorised to do this action",
+                'error_msg' => 'Oops, you seems less privileged!'
             ));
             exit();
         }
@@ -357,4 +316,3 @@ function import(Request $request){
         exit();
     }
 }
-

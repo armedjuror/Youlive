@@ -13,7 +13,7 @@ class Request {
         $this->body = $_POST;
         $this->query = $_GET;
         $this->files = $_FILES;
-        if (isset($_SERVER['CONTENT_TYPE'])){
+        if (isset($_SERVER['CONTENT_TYPE']) && !in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST'])){
             $this::parse_raw_http_request();
         }
     }
@@ -108,7 +108,7 @@ class Request {
                 // match "name" and optional value in between newline sequences
                 preg_match('/name=\"([^\"]*)\"[\n|\r]+([^\n\r].*)?\r$/s', $block, $matches);
             }
-            $this->body[$matches[1]] = $matches[2];
+            $this->body[$matches[1]] = $matches[2]??null;
         }
     }
 }

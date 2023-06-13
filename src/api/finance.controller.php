@@ -4,27 +4,23 @@
  * User Controller
  */
 
-const TABLE = 'users';
+const TABLE = 'finance';
 const PK = 'id';
-const AK = ['channel_id'];
-const SELECTABLE = ['channel_id', 'id', 'type', 'email', 'name', 'joined_at', 'last_login_at', 'updated_at'];
-const REQUIRED_TO_INSERT = ['channel_id', 'type', 'email', 'name', 'password'];
-const INSERT_FIELDS = ['channel_id', 'id', 'type', 'email', 'name', 'password'];
+const AK = ['channel_id', 'counterparty', 'created_by'];
+const SELECTABLE = ['channel_id', 'id', 'description', 'amount', 'created_at', 'created_by', 'method', 'counterparty', 'updated_at'];
+const REQUIRED_TO_INSERT = ['channel_id', 'description', 'amount', 'created_by', 'method', 'counterparty'];
+const INSERT_FIELDS = ['channel_id', 'id', 'description', 'amount', 'created_by', 'method', 'counterparty'];
 // If PK is in INSERT_FIELDS then it should be VARCHAR of size 13 or more and uniqid will be generated while creation
-const CREATED_AT = 'joined_at';
-if (in_array(PK, INSERT_FIELDS)) {
-    define("GENERATE_PK", true);
-} else {
-    define("GENERATE_PK", false);
-}
-
-const PASSWORDS = ['password'];
-const UPDATABLE = ['channel_id', 'type', 'email', 'name', 'password', 'last_login_at'];
+const CREATED_AT = 'created_at';
+const GENERATE_PK = true;
+const PASSWORDS = [];
+const UPDATABLE = ['description', 'amount', 'created_by', 'method', 'counterparty'];
 const UPDATED_AT = 'updated_at';
-if ($_SESSION['type']!='admin'){
-    echo json_encode(array('status_code'=>401, 'error_code'=>'UNAUTHORISED', 'error_desc'=>'Unauthorised access!', 'error_msg'=>'Oops, you seems less privileged!'));
-    exit();
-}
+
+//if ($_SESSION['type']!='admin'){
+//    echo json_encode(array('status_code'=>401, 'error_code'=>'UNAUTHORISED', 'error_desc'=>'Unauthorised access!', 'error_msg'=>'Oops, you seems less privileged!'));
+//    exit();
+//}
 
 
 /**
@@ -60,7 +56,7 @@ function main(Request $request)
                 $select = $request->connection->prepare("SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE . " WHERE " . PK . "=?");
                 $select->bind_param(Database::get_type_char($request->query['pk']), $request->query['pk']);
             } elseif (isset($request->query['ak']) && isset($request->query['key']) && in_array($request->query['key'], AK)) {
-                $select = $request->connection->prepare("SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE . " WHERE `" . $request->query['key'] . "`=?");
+                $select = $request->connection->prepare("SELECT " . '`' . implode('`, `', $selectables) . '`' . " FROM " . TABLE . " WHERE " . $request->query['key'] . "=?");
                 $select->bind_param(Database::get_type_char($request->query['ak']), $request->query['ak']);
             } // Index
             else {
@@ -127,6 +123,8 @@ function main(Request $request)
                     $type_string .= Database::get_type_char($request->body[$var]);
                 }
             }
+
+
             $insert = $request->connection->prepare('INSERT IGNORE INTO ' . TABLE . ' 
                     ( ' . '`' . implode('`, `', INSERT_FIELDS) . '`' . ', `' . CREATED_AT . '`) 
                     VALUE (
@@ -178,7 +176,6 @@ function main(Request $request)
                 }
 
             }
-
             if (!empty($update_keys)){
                 $update = $request->connection->prepare('UPDATE ' . TABLE . ' SET
                     ' . '`' . implode('`=?, `', $update_keys) . '`=?' . ', `'. UPDATED_AT .'`=NOW()
@@ -332,13 +329,13 @@ function import(Request $request){
                 exit();
             }else{
                 echo json_encode(array(
-                        'status_code'=>1,
-                        'message'=>"Successfully completed the import",
-                        'imported' => $imported_count,
-                        'skipped'=>$skipped_count,
-                        "time_used"=>$time_spend,
-                        'password'=>$dummy,
-                        'errors'=>$errors
+                    'status_code'=>1,
+                    'message'=>"Successfully completed the import",
+                    'imported' => $imported_count,
+                    'skipped'=>$skipped_count,
+                    "time_used"=>$time_spend,
+                    'password'=>$dummy,
+                    'errors'=>$errors
                 ));
                 exit();
             }

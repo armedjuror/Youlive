@@ -4,7 +4,10 @@ session_check($db_connection);
 require 'head.php';
 require 'navigation.php';
 if ($_SESSION['type']!='admin'){
-    header('Location: logout.php');
+    print_error(new Exception("Unauthorised Access"), 'Oops, you seems less privileged!', 'This page is only meant for admin users');
+    echo '</div>';
+    include 'foot.php';
+    exit();
 }
 
 $users = $db_connection->query("SELECT * FROM users WHERE channel_id='".$_SESSION['channel_id']."'")->fetch_all(MYSQLI_ASSOC);
@@ -30,6 +33,7 @@ $users = $db_connection->query("SELECT * FROM users WHERE channel_id='".$_SESSIO
                                 <thead>
                                 <tr>
                                     <th>#</th>
+                                    <th>Id</th>
                                     <th>Type</th>
                                     <th>Name</th>
                                     <th>Email</th>
@@ -40,12 +44,13 @@ $users = $db_connection->query("SELECT * FROM users WHERE channel_id='".$_SESSIO
                                 <?php
                                 $index=1;
                                 foreach ($users as $user){
-                                    echo '<tr>
-                                            <td>'.$index.'</td>
-                                            <td>'.$user['type'].'</td>
-                                            <td>'.$user['name'].'</td>
-                                            <td>'.$user['email'].'</td>
-                                            <td>
+                                    echo '<tr id="'.$user['id'].'-row">
+                                            <td id="'.$user['id'].'-index">'.$index.'</td>
+                                            <td id="'.$user['id'].'-id">'.$user['id'].'</td>
+                                            <td id="'.$user['id'].'-type">'.$user['type'].'</td>
+                                            <td id="'.$user['id'].'-name">'.$user['name'].'</td>
+                                            <td id="'.$user['id'].'-email">'.$user['email'].'</td>
+                                            <td id="'.$user['id'].'-operation">
                                                 <i class="fa fa-edit" title="Modify User"  onclick="triggerUserForm(this, \'modify\', \''. $user['id'] .'\', \'' . $user['name'] . '\', \'' . $user['email'] . '\')"></i> 
                                                 <i class="fa fa-key" title="Change Password" onclick="triggerUserForm(this, \'password\', \''. $user['id'] .'\', \'' . $user['name'] . '\', \'' . $user['email'] . '\')"></i> 
                                                 <i class="fa fa-trash" title="Delete User"  onclick="triggerUserForm(this, \'delete\', \''. $user['id'] .'\')"></i></td>
@@ -117,6 +122,8 @@ $users = $db_connection->query("SELECT * FROM users WHERE channel_id='".$_SESSIO
 
         <!-- End of Main Content -->
 
-<?php
-require_once 'foot.php';
+<?php require_once 'foot.php'; ?>
+</body>
+
+</html>
 

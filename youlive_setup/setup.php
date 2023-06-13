@@ -3,7 +3,7 @@ require __DIR__.'/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-const APP_NAME = "SKICR";
+const APP_NAME = "Youlive";
 const THEME='danger';
 
 try{

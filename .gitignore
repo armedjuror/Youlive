@@ -4,3 +4,6 @@ youlive_setup/vendor/
 src/vendor/
 src/sb-admin-demo/
 .idea/
+.DS_Store
+src/.DS_Store
+Archive.zip
