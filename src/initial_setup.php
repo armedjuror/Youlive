@@ -50,7 +50,6 @@ else{
         $name = $_POST['admin_name'];
         $password = $_POST['password'];
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
-        echo $_POST['channel_id'];
         $add_admin = $db_connection->prepare('
             INSERT IGNORE INTO users (channel_id, id, type, email, `name`, `password`) VALUE (
                 ?, ?, ?, ?, ?, ?
@@ -59,7 +58,6 @@ else{
         $type = 'admin';
         $add_admin->bind_param('ssssss', $_POST['channel_id'], $admin_id,  $type, $email, $name, $password_hash);
         if ($add_admin->execute()){
-//            exit();
             header('Location: dashboard.php');
         }else{
             log_error($db_connection, 'DB_INSERT', $db_connection->error);

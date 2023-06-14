@@ -19,6 +19,7 @@ function buildClient(){
     $client->setAccessType("offline");
     $client->setIncludeGrantedScopes(true);
     $client->addScope(['profile', 'email', Google_Service_YouTube::YOUTUBE_FORCE_SSL]);
+    $client->setPrompt('consent');
 	return $client;
 }
 

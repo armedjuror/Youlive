@@ -3,8 +3,8 @@ require __DIR__.'/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-const APP_NAME = "Youlive";
-const THEME='danger';
+define("APP_NAME", $_ENV['APP_NAME']);
+define("THEME", $_ENV['APP_THEME']);
 
 try{
     $db_connection = new mysqli(
